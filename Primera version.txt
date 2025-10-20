@@ -1,0 +1,301 @@
+#include <iostream>
+#include <string>
+#include <vector>
+#include <sstream>
+#include <cstdlib>
+#include <direct.h> // Para _chdir() y _getcwd() en Windows
+#include <cstring>
+#include <ctime>
+#include <algorithm> // Para std::transform y tolower
+
+// Enum para los idiomas
+enum Language { SPANISH, ENGLISH, PORTUGUESE };
+
+// Estructura para almacenar textos por idioma
+struct LanguageText {
+    std::string prompt_name; // Nombre personalizado del shell
+    std::string help;
+    std::string cd_usage;
+    std::string cd_error;
+    std::string pwd_error;
+    std::string cmd_error;
+    std::string exit_msg;
+    std::string info_msg;
+    std::string select_lang_msg;
+    std::string invalid_lang_msg;
+    std::string data_access_msg;
+    std::string invalid_access_msg;
+    std::string sensitive_folder_msg; // Nuevo: mensaje para carpetas sensibles
+    std::string invalid_sensitive_msg; // Nuevo: mensaje de entrada inválida
+};
+
+// Textos para cada idioma
+const LanguageText texts[] = {
+    // Español
+    {
+        "MiniShell de Rea<11>",
+        "Comandos disponibles en este MiniShell <Prototipo>:\n"
+        "  cd [directorio]     - Sirve para cambiar al directorio especificado (use comillas para rutas con espacios, ej: \"Program Files\").\n"
+        "  pwd                 - Mostrara el directorio actual.\n"
+        "  dir [opciones]      - Lista archivos (ej: dir /p).\n"
+        "  mkdir [dir]         - Crea un directorio.\n"
+        "  del [archivo]       - Elimina un archivo.\n"
+        "  move [origen] [dest] - Mueve o renombra archivos.\n"
+        "  copy [origen] [dest] - Copia archivos.\n"
+        "  info                - Mostrara la fecha actual.\n"
+        "  lang [es|en|pt]     - Cambia el idioma (español, inglés, portugués).\n"
+        "  help                - Muestra esta ayuda.\n"
+        "  exit                - Sale del MiniShell.\n"
+        "Otros comandos del SO se ejecutan directamente.\n"
+        "Shell desarrollado por Rea <Optimizado para Windows 11 porque esa es mi PC>!.\n",
+        "Uso: cd [directorio] (use comillas para rutas con espacios, ej: cd \"Program Files\")\n",
+        "Error en cd: ",
+        "Error en pwd: ",
+        "Error ejecutando comando: ",
+        "Saliendo de MiniShell...\n",
+        "Fecha actual: ",
+        "Por favor, seleccione un idioma (es: español, en: inglés, pt: portugués): ",
+        "Idioma no válido. Use: es, en, pt\n",
+        "Este MiniShell puede acceder a los archivos y directorios de su computadora. ¿Permite el acceso? (y/n): ",
+        "Entrada no válida. Por favor, ingrese 'y' o 'n': ",
+        "Advertencia: Este MiniShell puede modificar archivos en carpetas del sistema como Windows o Program Files. ¿Desea continuar? (y/n): ",
+        "Entrada no válida. Por favor, ingrese 'y' o 'n': "
+    },
+    // Inglés
+    {
+        "MiniShell by Rea<11>",
+        "Available commands in this MiniShell <Prototype>:\n"
+        "  cd [directory]      - Changes to the specified directory (use quotes for paths with spaces, e.g., \"Program Files\").\n"
+        "  pwd                 - Shows the current directory.\n"
+        "  dir [options]       - Lists files (e.g., dir /p).\n"
+        "  mkdir [dir]         - Creates a directory.\n"
+        "  del [file]          - Deletes a file.\n"
+        "  move [source] [dest] - Moves or renames files.\n"
+        "  copy [source] [dest] - Copies files.\n"
+        "  info                - Shows the current date.\n"
+        "  lang [es|en|pt]     - Changes the language (Spanish, English, Portuguese).\n"
+        "  help                - Shows this help.\n"
+        "  exit                - Exits the MiniShell.\n"
+        "Other OS commands are executed directly.\n"
+        "Shell developed by Rea <Optimized for Windows 11 because that's my PC>!.\n",
+        "Usage: cd [directory] (use quotes for paths with spaces, e.g., cd \"Program Files\")\n",
+        "Error in cd: ",
+        "Error in pwd: ",
+        "Error executing command: ",
+        "Exiting MiniShell...\n",
+        "Current date: ",
+        "Please select a language (es: Spanish, en: English, pt: Portuguese): ",
+        "Invalid language. Use: es, en, pt\n",
+        "This MiniShell can access your computer's files and directories. Do you allow access? (y/n): ",
+        "Invalid input. Please enter 'y' or 'n': ",
+        "Warning: This MiniShell can modify files in system folders like Windows or Program Files. Do you want to continue? (y/n): ",
+        "Invalid input. Please enter 'y' or 'n': "
+    },
+    // Portugués
+    {
+        "MiniShell de Rea<11>",
+        "Comandos disponíveis neste MiniShell <Protótipo>:\n"
+        "  cd [diretório]      - Muda para o diretório especificado (use aspas para caminhos com espaços, ex: \"Program Files\").\n"
+        "  pwd                 - Mostra o diretório atual.\n"
+        "  dir [opções]        - Lista arquivos (ex: dir /p).\n"
+        "  mkdir [dir]         - Cria um diretório.\n"
+        "  del [arquivo]       - Deleta um arquivo.\n"
+        "  move [origem] [dest] - Move ou renomeia arquivos.\n"
+        "  copy [origem] [dest] - Copia arquivos.\n"
+        "  info                - Mostra a data atual.\n"
+        "  lang [es|en|pt]     - Muda o idioma (espanhol, inglês, português).\n"
+        "  help                - Mostra esta ajuda.\n"
+        "  exit                - Sai do MiniShell.\n"
+        "Outros comandos do SO são executados diretamente.\n"
+        "Shell desenvolvido por Rea <Otimizado para Windows 11 porque esse é o meu PC>!.\n",
+        "Uso: cd [diretório] (use aspas para caminhos com espaços, ex: cd \"Program Files\")\n",
+        "Erro em cd: ",
+        "Erro em pwd: ",
+        "Erro ao executar comando: ",
+        "Saindo do MiniShell...\n",
+        "Data atual: ",
+        "Por favor, selecione um idioma (es: espanhol, en: inglês, pt: português): ",
+        "Idioma inválido. Use: es, en, pt\n",
+        "Este MiniShell pode acessar os arquivos e diretórios do seu computador. Você permite o acesso? (y/n): ",
+        "Entrada inválida. Por favor, insira 'y' ou 'n': ",
+        "Aviso: Este MiniShell pode modificar arquivos em pastas do sistema como Windows ou Program Files. Deseja continuar? (y/n): ",
+        "Entrada inválida. Por favor, insira 'y' ou 'n': "
+    }
+};
+
+// Lista de carpetas sensibles
+const std::vector<std::string> sensitiveFolders = {
+    "C:\\Windows",
+    "C:\\Program Files",
+    "C:\\Program Files (x86)"
+};
+
+// Función para convertir una cadena a minúsculas
+std::string toLower(const std::string& str) {
+    std::string result = str;
+    std::transform(result.begin(), result.end(), result.begin(), ::tolower);
+    return result;
+}
+
+// Función para verificar si una ruta es sensible
+bool isSensitiveFolder(const std::string& path) {
+    std::string lowerPath = toLower(path);
+    for (const auto& folder : sensitiveFolders) {
+        std::string lowerFolder = toLower(folder);
+        if (lowerPath.find(lowerFolder) == 0) { // Verifica si la ruta comienza con una carpeta sensible
+            return true;
+        }
+    }
+    return false;
+}
+
+// Función para dividir la entrada en comando y argumentos, preservando rutas
+std::vector<std::string> parseCommand(const std::string& input) {
+    std::vector<std::string> tokens;
+    std::istringstream iss(input);
+    std::string token;
+
+    // Obtener el primer token (el comando)
+    iss >> token;
+    tokens.push_back(token);
+
+    // Si el comando es 'cd', tomar el resto como la ruta
+    if (token == "cd") {
+        std::string path;
+        std::getline(iss, path); // Tomar el resto de la línea
+        path.erase(0, path.find_first_not_of(" \t")); // Eliminar espacios iniciales
+        if (!path.empty()) {
+            tokens.push_back(path);
+        }
+    } else {
+        // Para otros comandos, dividir normalmente
+        while (iss >> token) {
+            tokens.push_back(token);
+        }
+    }
+    return tokens;
+}
+
+// Función para obtener el directorio actual como string
+std::string getCurrentPath() {
+    char cwd[1024];
+    if (_getcwd(cwd, sizeof(cwd)) != nullptr) {
+        return std::string(cwd);
+    }
+    return "Desconocido";
+}
+
+// Función para solicitar permiso de acceso a datos
+bool requestDataAccess() {
+    std::string input;
+    while (true) {
+        std::cout << texts[SPANISH].data_access_msg;
+        std::getline(std::cin, input);
+        if (input == "y" || input == "Y") return true;
+        if (input == "n" || input == "N") return false;
+        std::cout << texts[SPANISH].invalid_access_msg;
+    }
+}
+
+// Función para solicitar permiso para carpetas sensibles
+bool requestSensitiveAccess(Language lang) {
+    std::string input;
+    while (true) {
+        std::cout << texts[lang].sensitive_folder_msg;
+        std::getline(std::cin, input);
+        if (input == "y" || input == "Y") return true;
+        if (input == "n" || input == "N") return false;
+        std::cout << texts[lang].invalid_sensitive_msg;
+    }
+}
+
+// Función para seleccionar idioma al inicio
+Language selectLanguage() {
+    std::string input;
+    while (true) {
+        std::cout << texts[SPANISH].select_lang_msg;
+        std::getline(std::cin, input);
+        if (input == "es") return SPANISH;
+        if (input == "en") return ENGLISH;
+        if (input == "pt") return PORTUGUESE;
+        std::cout << texts[SPANISH].invalid_lang_msg;
+    }
+}
+
+int main() {
+    // Solicitar permiso de acceso a datos
+    bool allowDataAccess = requestDataAccess();
+    if (allowDataAccess) {
+        char* userProfile = getenv("USERPROFILE");
+        if (userProfile != nullptr) {
+            _chdir(userProfile); // Inicia en C:\Users\TuUsuario
+        } else {
+            std::cerr << texts[SPANISH].cd_error << "No se pudo obtener USERPROFILE\n";
+        }
+    } // Si no permite acceso, se queda en el directorio actual
+
+    // Seleccionar idioma al inicio
+    Language currentLang = selectLanguage();
+
+    while (true) {
+        // Mostrar prompt con nombre y ruta actual
+        std::cout << texts[currentLang].prompt_name << "\n" << getCurrentPath() << "> ";
+        std::string input;
+        std::getline(std::cin, input);
+
+        if (input.empty()) continue;
+
+        auto tokens = parseCommand(input);
+        std::string command = tokens[0];
+
+        if (command == "exit") {
+            std::cout << texts[currentLang].exit_msg;
+            break;
+        } else if (command == "help") {
+            std::cout << texts[currentLang].help;
+        } else if (command == "info") {
+            std::time_t now = std::time(nullptr);
+            std::cout << texts[currentLang].info_msg << std::ctime(&now);
+        } else if (command == "lang") {
+            if (tokens.size() < 2) {
+                std::cout << "Uso: lang [es|en|pt]\n";
+                continue;
+            }
+            if (tokens[1] == "es") {
+                currentLang = SPANISH;
+            } else if (tokens[1] == "en") {
+                currentLang = ENGLISH;
+            } else if (tokens[1] == "pt") {
+                currentLang = PORTUGUESE;
+            } else {
+                std::cout << texts[currentLang].invalid_lang_msg;
+            }
+        } else if (command == "cd") {
+            if (tokens.size() < 2) {
+                std::cout << texts[currentLang].cd_usage;
+                continue;
+            }
+            std::string path = tokens[1];
+            // Verificar si la ruta es sensible
+            if (isSensitiveFolder(path)) {
+                if (!requestSensitiveAccess(currentLang)) {
+                    std::cout << texts[currentLang].cd_error << "Acceso a carpeta sensible denegado.\n";
+                    continue;
+                }
+            }
+            if (_chdir(path.c_str()) != 0) {
+                std::cerr << texts[currentLang].cd_error << strerror(errno) << std::endl;
+                std::cerr << "Sugerencia: Use comillas para rutas con espacios (ej: cd \"Program Files\")\n";
+            }
+        } else if (command == "pwd") {
+            std::cout << getCurrentPath() << std::endl;
+        } else {
+            std::string fullCmd = input;
+            int result = system(fullCmd.c_str());
+            if (result != 0) {
+                std::cerr << texts[currentLang].cmd_error << command << std::endl;
+            }
+        }
+    }
+    return 0;
+}

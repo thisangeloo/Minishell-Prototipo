@@ -1,0 +1,322 @@
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <cstdlib>
+#include <direct.h>
+#include <cstring>
+#include <ctime>
+#include <algorithm>
+#include <windows.h>
+#include <vector>
+#include <thread>
+#include <chrono>
+
+enum Language { SPANISH, ENGLISH, PORTUGUESE };
+
+struct LanguageText {
+    std::string shell_name;
+    std::string help;
+    std::string cd_usage;
+    std::string cd_error;
+    std::string pwd_error;
+    std::string cmd_error;
+    std::string exit_msg;
+    std::string info_msg;
+    std::string select_lang_msg;
+    std::string invalid_lang_msg;
+    std::string data_access_msg;
+    std::string invalid_access_msg;
+    std::string sensitive_warning;
+    std::string sensitive_confirm;
+    std::string denied_access;
+    std::string fs_denied_action;
+};
+
+#define GREEN  "\033[1;32m"
+#define BLUE   "\033[1;34m"
+#define CYAN   "\033[1;36m"
+#define RESET  "\033[0m"
+
+const LanguageText texts[] = {
+    // Español
+    {
+        "MiniShell de Rea<11>",
+        "Comandos disponibles:\n"
+        "  cd [dir]        - Cambia de directorio.\n"
+        "  pwd             - Muestra el directorio actual.\n"
+        "  dir             - Lista archivos del directorio.\n"
+        "  mkdir [dir]     - Crea un nuevo directorio.\n"
+        "  del [archivo]   - Elimina un archivo.\n"
+        "  move [o] [d]    - Mueve o renombra archivos.\n"
+        "  copy [o] [d]    - Copia archivos.\n"
+        "  info            - Muestra la fecha actual.\n"
+        "  lang [es|en|pt] - Cambia el idioma.\n"
+        "  exit            - Sale del MiniShell.\n",
+        "Uso: cd [directorio]\n",
+        "Error al cambiar de directorio: ",
+        "Error al obtener el directorio actual.\n",
+        "Error ejecutando comando: ",
+        "Saliendo del MiniShell...\n",
+        "Fecha actual: ",
+        "Por favor, seleccione un idioma (es: español, en: inglés, pt: portugués): ",
+        "Idioma no válido. Use: es, en, pt\n",
+        "Este MiniShell puede acceder a los archivos de su computadora. ¿Permite el acceso? (y/n): ",
+        "Entrada no válida. Ingrese 'y' o 'n': ",
+        "⚠ Está intentando acceder a una carpeta sensible del sistema.",
+        "¿Desea continuar? (y/n): ",
+        "Acceso denegado. Volviendo al directorio anterior...",
+        "Acceso al sistema de archivos denegado. Use solo comandos internos (help, info, lang, exit, pwd).\n"
+    },
+    // Inglés
+    {
+        "MiniShell by Rea<11>",
+        "Available commands:\n"
+        "  cd [dir]        - Change directory.\n"
+        "  pwd             - Show current directory.\n"
+        "  dir             - List directory files.\n"
+        "  mkdir [dir]     - Create directory.\n"
+        "  del [file]      - Delete file.\n"
+        "  move [src] [dst]- Move or rename files.\n"
+        "  copy [src] [dst]- Copy files.\n"
+        "  info            - Show current date.\n"
+        "  lang [es|en|pt] - Change language.\n"
+        "  exit            - Exit MiniShell.\n",
+        "Usage: cd [directory]\n",
+        "Error changing directory: ",
+        "Error getting current directory.\n",
+        "Error executing command: ",
+        "Exiting MiniShell...\n",
+        "Current date: ",
+        "Please select a language (es: Spanish, en: English, pt: Portuguese): ",
+        "Invalid language. Use: es, en, pt\n",
+        "This MiniShell can access your computer’s files. Allow access? (y/n): ",
+        "Invalid input. Enter 'y' or 'n': ",
+        "⚠ You are trying to access a sensitive system folder.",
+        "Do you want to continue? (y/n): ",
+        "Access denied. Returning to previous directory...",
+        "Filesystem access denied. Use only internal commands (help, info, lang, exit, pwd).\n"
+    },
+    // Portugués
+    {
+        "MiniShell de Rea<11>",
+        "Comandos disponíveis:\n"
+        "  cd [dir]        - Muda de diretório.\n"
+        "  pwd             - Mostra o diretório atual.\n"
+        "  dir             - Lista arquivos.\n"
+        "  mkdir [dir]     - Cria um diretório.\n"
+        "  del [arquivo]   - Exclui um arquivo.\n"
+        "  move [o] [d]    - Move ou renomeia arquivos.\n"
+        "  copy [o] [d]    - Copia arquivos.\n"
+        "  info            - Mostra a data atual.\n"
+        "  lang [es|en|pt] - Muda o idioma.\n"
+        "  exit            - Sai do MiniShell.\n",
+        "Uso: cd [diretório]\n",
+        "Erro ao mudar de diretório: ",
+        "Erro ao obter o diretório atual.\n",
+        "Erro ao executar comando: ",
+        "Saindo do MiniShell...\n",
+        "Data atual: ",
+        "Por favor, selecione um idioma (es: espanhol, en: inglês, pt: português): ",
+        "Idioma inválido. Use: es, en, pt\n",
+        "Este MiniShell pode acessar os arquivos do seu computador. Permite o acesso? (y/n): ",
+        "Entrada inválida. Digite 'y' ou 'n': ",
+        "⚠ Você está tentando acessar uma pasta sensível do sistema.",
+        "Deseja continuar? (y/n): ",
+        "Acesso negado. Voltando ao diretório anterior...",
+        "Acesso ao sistema de arquivos negado. Use apenas comandos internos (help, info, lang, exit, pwd).\n"
+    }
+};
+
+void clearScreen() {
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    DWORD count;
+    DWORD cellCount;
+    COORD homeCoords = { 0, 0 };
+
+    if (hConsole == INVALID_HANDLE_VALUE) return;
+    if (!GetConsoleScreenBufferInfo(hConsole, &csbi)) return;
+    cellCount = csbi.dwSize.X * csbi.dwSize.Y;
+
+    FillConsoleOutputCharacter(hConsole, (TCHAR)' ', cellCount, homeCoords, &count);
+    FillConsoleOutputAttribute(hConsole, csbi.wAttributes, cellCount, homeCoords, &count);
+    SetConsoleCursorPosition(hConsole, homeCoords);
+}
+
+std::string toLower(const std::string& s) {
+    std::string out = s;
+    std::transform(out.begin(), out.end(), out.begin(), ::tolower);
+    return out;
+}
+
+Language selectLanguage() {
+    std::string input;
+    while (true) {
+        std::cout << texts[SPANISH].select_lang_msg;
+        std::getline(std::cin, input);
+        if (input == "es") return SPANISH;
+        if (input == "en") return ENGLISH;
+        if (input == "pt") return PORTUGUESE;
+        std::cout << texts[SPANISH].invalid_lang_msg;
+    }
+}
+
+bool requestDataAccess(Language lang) {
+    std::string input;
+    while (true) {
+        std::cout << texts[lang].data_access_msg;
+        std::getline(std::cin, input);
+        if (input == "y" || input == "Y") return true;
+        if (input == "n" || input == "N") return false;
+        std::cout << texts[lang].invalid_access_msg;
+    }
+}
+
+bool isSensitiveDirectory(const std::string& path) {
+    std::vector<std::string> sensitive = {
+        "C:\\Windows", "C:\\Program Files", "C:\\Program Files (x86)",
+        "C:\\ProgramData", "C:\\Users\\Public"
+    };
+    for (auto& dir : sensitive) {
+        if (_strnicmp(path.c_str(), dir.c_str(), dir.size()) == 0)
+            return true;
+    }
+    return false;
+}
+
+std::string getCurrentPath() {
+    char buffer[MAX_PATH];
+    if (GetCurrentDirectoryA(MAX_PATH, buffer))
+        return std::string(buffer);
+    return "Unknown";
+}
+
+void showPrompt(Language lang, const std::string& displayUser) {
+    std::string path = getCurrentPath();
+    // flush para evitar superposición de texto
+    std::cout << std::flush;
+    std::cout << GREEN << displayUser << CYAN << "@" << texts[lang].shell_name
+              << RESET << ":" << BLUE << path << RESET << " $ ";
+}
+
+bool isFilesystemCommand(const std::string& cmd) {
+    static const std::vector<std::string> fsCmds = {
+        "cd", "dir", "mkdir", "rmdir", "del", "copy", "move", "type"
+    };
+    for (const auto& c : fsCmds) if (c == cmd) return true;
+    return false;
+}
+
+// === MAIN ===
+int main() {
+    Language lang = selectLanguage();
+
+    // Si permite acceso a archivos -> true, si no -> false
+    bool allowFs = requestDataAccess(lang);
+
+    clearScreen();
+
+    // nombre para la bienvenida: usuario Windows si allowFs==true, sino "MiniShell"
+    char usernameBuf[256];
+    DWORD unameSize = sizeof(usernameBuf);
+    GetUserNameA(usernameBuf, &unameSize);
+    std::string winUser = usernameBuf;
+    std::string displayName = allowFs ? winUser : "MiniShell";
+
+    // Mostrar bienvenida 3 segundos
+    std::cout << GREEN << "\n\n\t===============================" << RESET << "\n";
+    std::cout << CYAN << "\t   Bienvenido, " << displayName << RESET << "\n";
+    std::cout << GREEN << "\t===============================\n\n" << RESET;
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+    clearScreen();
+
+    // Si permitio acceso, cambiar a carpeta del usuario; si no, no tocar filesystem
+    if (allowFs) {
+        char* userProfile = getenv("USERPROFILE");
+        if (userProfile) SetCurrentDirectoryA(userProfile);
+    }
+
+    // Bucle principal
+    while (true) {
+        // Mostrar prompt; mostramos siempre el nombre del usuario Windows en el prompt
+        // (esto no requiere cambiar directorio). Si prefieres otra cosa, cambia displayName.
+        showPrompt(lang, winUser.empty() ? "user" : winUser);
+
+        std::string input;
+        std::getline(std::cin, input);
+        if (input.empty()) continue;
+
+        // parse simple
+        std::istringstream iss(input);
+        std::string cmd;
+        iss >> cmd;
+
+        // Normalizar cmd a minúsculas para comparación
+        std::string cmdLower = toLower(cmd);
+
+        if (cmdLower == "exit") {
+            std::cout << texts[lang].exit_msg;
+            break;
+        } else if (cmdLower == "help") {
+            std::cout << texts[lang].help;
+        } else if (cmdLower == "pwd") {
+            if (!allowFs) {
+                std::cout << texts[lang].fs_denied_action;
+            } else {
+                std::cout << getCurrentPath() << std::endl;
+            }
+        } else if (cmdLower == "cd") {
+            if (!allowFs) {
+                std::cout << texts[lang].fs_denied_action;
+                continue;
+            }
+            std::string path;
+            std::getline(iss, path);
+            if (path.empty()) {
+                std::cout << texts[lang].cd_usage;
+                continue;
+            }
+            path.erase(0, path.find_first_not_of(" \t\""));
+            path.erase(path.find_last_not_of(" \t\"") + 1);
+
+            std::string prev = getCurrentPath();
+            if (isSensitiveDirectory(path)) {
+                std::string resp;
+                std::cout << texts[lang].sensitive_warning << " " << texts[lang].sensitive_confirm;
+                std::getline(std::cin, resp);
+                if (toLower(resp) != "y") {
+                    std::cout << texts[lang].denied_access << std::endl;
+                    continue;
+                }
+            }
+            if (!SetCurrentDirectoryA(path.c_str())) {
+                std::cerr << texts[lang].cd_error << strerror(errno) << std::endl;
+                SetCurrentDirectoryA(prev.c_str());
+            }
+        } else if (cmdLower == "info") {
+            time_t now = time(nullptr);
+            std::cout << texts[lang].info_msg << ctime(&now);
+        } else if (cmdLower == "lang") {
+            // Cambiar idioma en cualquier momento (no requiere filesystem)
+            lang = selectLanguage();
+        } else {
+            // Otros comandos: si no hay permiso para FS, bloqueamos ejecución de comandos del sistema
+            if (!allowFs) {
+                // si el usuario intenta un comando de sistema o uno que pueda acceder a FS, denegar
+                if (isFilesystemCommand(cmdLower) || !cmdLower.empty()) {
+                    // Para seguridad, bloqueamos cualquier envío a system cuando FS deshabilitado.
+                    std::cout << texts[lang].fs_denied_action;
+                    continue;
+                }
+            }
+
+            // Si allowFs == true ejecutamos system normalmente
+            int res = system(input.c_str());
+            if (res != 0) {
+                std::cerr << texts[lang].cmd_error << cmd << std::endl;
+            }
+        }
+    }
+
+    return 0;
+}
